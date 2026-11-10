@@ -1,4 +1,6 @@
 [core]
     remote = dagshub
+    autostage = true
 ['remote "dagshub"']
     url = https://dagshub.com/Andres-viu-mbid/13MBID-AZ.dvc
+    ssl_verify = false
