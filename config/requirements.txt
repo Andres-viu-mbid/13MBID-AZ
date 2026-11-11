@@ -16,3 +16,4 @@ uvicorn
 plotly
 matplotlib
 seaborn
+sweetviz

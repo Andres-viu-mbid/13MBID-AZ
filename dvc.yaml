@@ -1,0 +1,19 @@
+stages:
+  visualize_data:
+    desc: Genera las figuras exploratorias y los reportes sweetviz del escenario.
+    cmd: .venv/bin/python src/data_visualization.py && .venv/bin/python src/data_report.py
+    deps:
+      - src/data_visualization.py
+      - src/data_report.py
+      - data/raw/datos_clientes.csv
+      - data/raw/datos_resenas.csv
+    outs:
+      - docs/figures/distribucion_sentimiento.png
+      - docs/figures/longitud_resenas.png
+      - docs/figures/correlaciones.png
+      - docs/figures/servicio_postventa.png
+      - docs/figures/tiempo_respuesta.png
+      - docs/reporte_sweetviz.html
+      - docs/reporte_sweetviz_negativo.html
+      - docs/reporte_sweetviz_neutral.html
+      - docs/reporte_sweetviz_positivo.html

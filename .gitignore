@@ -165,3 +165,7 @@ mlruns
 
 # macOS
 .DS_Store
+
+# Salidas del stage visualize_data (gestionadas por DVC)
+docs/figures/
+docs/reporte_sweetviz*.html

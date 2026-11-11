@@ -1,0 +1,59 @@
+schema: '2.0'
+stages:
+  visualize_data:
+    cmd: .venv/bin/python src/data_visualization.py && .venv/bin/python 
+      src/data_report.py
+    deps:
+    - path: data/raw/datos_clientes.csv
+      hash: md5
+      md5: b46a5adb5c13bc3007ad2dfe45e58430
+      size: 438782
+    - path: data/raw/datos_resenas.csv
+      hash: md5
+      md5: e3ec9eeddaab38eea998b348bcd17d94
+      size: 4465568
+    - path: src/data_report.py
+      hash: md5
+      md5: 137d4c23a37f881ea29a8295490697d7
+      size: 1948
+    - path: src/data_visualization.py
+      hash: md5
+      md5: 7cc1add6bea5ed324e9dd9b7a59de5ea
+      size: 5976
+    outs:
+    - path: docs/figures/correlaciones.png
+      hash: md5
+      md5: d1ccea1bde4feb061c270bdfc4bf515a
+      size: 85818
+    - path: docs/figures/distribucion_sentimiento.png
+      hash: md5
+      md5: 788d1fc0e57a5595cbf3c34b0fd1992e
+      size: 43563
+    - path: docs/figures/longitud_resenas.png
+      hash: md5
+      md5: 5ec30ba7448ee4851badbff46ee46afb
+      size: 34292
+    - path: docs/figures/servicio_postventa.png
+      hash: md5
+      md5: 463119485d0814a88110517099097aab
+      size: 52630
+    - path: docs/figures/tiempo_respuesta.png
+      hash: md5
+      md5: 8dbbd066729fa8a3588c88c688d4849b
+      size: 90237
+    - path: docs/reporte_sweetviz.html
+      hash: md5
+      md5: af212f868ff241feeb49addaa45dbe6f
+      size: 1081902
+    - path: docs/reporte_sweetviz_negativo.html
+      hash: md5
+      md5: caab5713815a36fbd17bbdbad9e3b604
+      size: 1215198
+    - path: docs/reporte_sweetviz_neutral.html
+      hash: md5
+      md5: 1bdada7a85ddb35baf978e2172607f52
+      size: 1214072
+    - path: docs/reporte_sweetviz_positivo.html
+      hash: md5
+      md5: e003af0da47435a87eca3d5c95ee1de8
+      size: 1214100
