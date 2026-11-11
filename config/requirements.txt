@@ -14,3 +14,5 @@ python-dotenv
 fastapi[standard]
 uvicorn
 plotly
+matplotlib
+seaborn
