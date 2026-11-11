@@ -78,3 +78,27 @@ stages:
       hash: md5
       md5: a94764647d2e5e7ec596b58ba41f66aa
       size: 53329
+  prepare_data:
+    cmd: .venv/bin/python src/data_prep.py
+    deps:
+    - path: data/raw/datos_clientes.csv
+      hash: md5
+      md5: b46a5adb5c13bc3007ad2dfe45e58430
+      size: 438782
+    - path: data/raw/datos_resenas.csv
+      hash: md5
+      md5: e3ec9eeddaab38eea998b348bcd17d94
+      size: 4465568
+    - path: src/data_prep.py
+      hash: md5
+      md5: d10cf865cb1adc1539ad5b2db72935b3
+      size: 9693
+    outs:
+    - path: data/processed/datos_integrados.csv
+      hash: md5
+      md5: a1957310d01f860c672330645c56ba6a
+      size: 5584759
+    - path: docs/reporte_transformaciones.html
+      hash: md5
+      md5: 49976c1938b8ef1830bd7d283b01f2f7
+      size: 3718
