@@ -5,6 +5,11 @@ from pandera.pandas import DataFrameSchema, Column, Check
 
 GENEROS = ["Femenino", "Masculino", "Otro"]
 SENTIMIENTOS = ["Positivo", "Negativo", "Neutral"]
+CATEGORIAS_PRODUCTO = ["Alimentos", "Belleza", "Calzado", "Deportes", "Electrónica", "Hogar", "Indumentaria", "Libros"]
+CANALES_COMPRA = ["Online", "Offline"]
+PLATAFORMAS = ["Amazon", "Falabella", "Flipkart", "JioMart", "Meesho", "MercadoLibre", "Nykaa", "Zepto"]
+SI_NO = ["Sí", "No"]
+UMBRAL_INCONSISTENCIA = 0.05
 
 @pytest.fixture
 def datos_clientes():
@@ -71,10 +76,26 @@ def test_schema_datos_resenas(datos_resenas):
         {
             "id_resena": Column(int, nullable=False),
             "id_cliente": Column(int, nullable=False),
-            "fecha_resena": Column(str, nullable=True),
+            "categoria_producto": Column(str, nullable=False, checks=Check.isin(CATEGORIAS_PRODUCTO)),
+            "canal_compra": Column(str, nullable=False, checks=Check.isin(CANALES_COMPRA)),
+            "plataforma": Column(str, nullable=False, checks=Check.isin(PLATAFORMAS)),
             "calificacion": Column(int, nullable=False, checks=Check.in_range(1, 5)),
+            "texto_resena": Column(str, nullable=False, checks=Check.str_length(min_value=1)),
+            "tiempo_respuesta_horas": Column(float, nullable=True, checks=Check.ge(0)),
+            "problema_resuelto": Column(str, nullable=False, checks=Check.isin(SI_NO)),
+            "reclamo_formal": Column(str, nullable=False, checks=Check.isin(SI_NO)),
+            "importe_compra": Column(float, nullable=False, checks=Check.gt(0)),
+            "fecha_resena": Column(
+                str,
+                nullable=True,
+                checks=Check(
+                    lambda s: pd.to_datetime(s, errors="coerce").notna(),
+                    error="fecha_resena no es una fecha válida",
+                ),
+            ),
             "sentimiento": Column(str, nullable=False, checks=Check.isin(SENTIMIENTOS)),
-        }
+        },
+        strict=True,
     )
     schema.validate(datos_resenas, lazy=True)
 
@@ -111,6 +132,24 @@ def test_basicos_resenas(datos_resenas):
     # EXTRA: pueden completar otras validaciones básicas
 
 
+def test_unicidad_claves(datos_clientes, datos_resenas):
+    """ Función para validar que las claves primarias no se repitan
+
+    Args:
+        datos_clientes (pd.DataFrame): Dataframe con los datos de clientes
+        datos_resenas (pd.DataFrame): Dataframe con los datos de reseñas
+
+    Returns:
+        None
+    """
+    # El id_cliente no debe repetirse en datos_clientes
+    schema_clientes = DataFrameSchema({"id_cliente": Column(int, nullable=False, unique=True)})
+    schema_clientes.validate(datos_clientes, lazy=True)
+    # El id_resena no debe repetirse en datos_resenas
+    schema_resenas = DataFrameSchema({"id_resena": Column(int, nullable=False, unique=True)})
+    schema_resenas.validate(datos_resenas, lazy=True)
+
+
 def test_integridad_referencial(datos_clientes, datos_resenas):
     """ Función para validar la integridad referencial entre los datos de clientes y reseñas
 
@@ -134,3 +173,31 @@ def test_integridad_referencial(datos_clientes, datos_resenas):
         }
     )
     integridad_referencial.validate(df_ids, lazy=True)
+
+
+def test_consistencia_calificacion_sentimiento(datos_resenas):
+    """ Función para validar la consistencia entre calificación y sentimiento
+
+    Una calificación baja no debería ir con un sentimiento positivo, y una
+    calificación alta no debería ir con uno negativo.
+
+    Args:
+        datos_resenas (pd.DataFrame): Dataframe con los datos de reseñas
+
+    Returns:
+        None
+    """
+    # Reseñas con calificación baja y su proporción de sentimientos positivos
+    calificacion_baja = datos_resenas[datos_resenas["calificacion"] < 3]
+    proporcion_positivos = (calificacion_baja["sentimiento"] == "Positivo").mean()
+    assert proporcion_positivos <= UMBRAL_INCONSISTENCIA, (
+        f"El {proporcion_positivos:.2%} de las reseñas con calificación menor a 3 tiene sentimiento Positivo "
+        f"(máximo permitido {UMBRAL_INCONSISTENCIA:.0%})"
+    )
+    # Reseñas con calificación alta y su proporción de sentimientos negativos
+    calificacion_alta = datos_resenas[datos_resenas["calificacion"] > 3]
+    proporcion_negativos = (calificacion_alta["sentimiento"] == "Negativo").mean()
+    assert proporcion_negativos <= UMBRAL_INCONSISTENCIA, (
+        f"El {proporcion_negativos:.2%} de las reseñas con calificación mayor a 3 tiene sentimiento Negativo "
+        f"(máximo permitido {UMBRAL_INCONSISTENCIA:.0%})"
+    )
