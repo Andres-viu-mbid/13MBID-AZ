@@ -17,3 +17,12 @@ stages:
       - docs/reporte_sweetviz_negativo.html
       - docs/reporte_sweetviz_neutral.html
       - docs/reporte_sweetviz_positivo.html
+
+  test_data_quality:
+    cmd: pytest --html=docs/reporte_calidad_datos.html --self-contained-html test/test_data_quality.py -v || true
+    deps:
+      - test/test_data_quality.py
+      - data/raw/datos_clientes.csv
+      - data/raw/datos_resenas.csv
+    outs:
+      - docs/reporte_calidad_datos.html
