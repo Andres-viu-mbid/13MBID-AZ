@@ -35,3 +35,17 @@ stages:
     outs:
       - data/processed/datos_integrados.csv
       - docs/reporte_transformaciones.html
+  train_model:
+    desc: Entrena el modelo final (LogisticRegression con los hiperparámetros seleccionados), lo registra en MLflow y guarda modelo, preprocesador, figuras y métricas.
+    cmd: .venv/bin/python src/train_model.py
+    deps:
+      - src/train_model.py
+      - data/processed/datos_integrados.csv
+    outs:
+      - models/trained_model.pkl
+      - models/preprocessor.pkl
+      - docs/figures/confusion_matrix_test.png
+      - docs/figures/roc_curve_test.png
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
