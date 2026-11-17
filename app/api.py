@@ -4,6 +4,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal
 import joblib
+import mlflow
+import mlflow.sklearn
 
 from contextlib import asynccontextmanager
 from src.data_prep import create_attributes, historial_clientes
@@ -11,6 +13,9 @@ from src.data_prep import create_attributes, historial_clientes
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/trained_model.pkl")
 DATA_PATH = os.getenv("DATA_PATH", "data/processed/datos_integrados.csv")
+
+# Modelo en producción dentro del Model Registry de MLflow (DagsHub)
+MODEL_URI = os.getenv("MODEL_URI", "models:/clasificador-sentimientos@produccion")
 
 # Definimos los dominios de los atributos de entrada
 CATEGORIAS = Literal["Alimentos", "Belleza", "Calzado", "Deportes",
@@ -55,14 +60,27 @@ modelo = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Cargar el modelo entrenado y el preprocesador al iniciar la aplicación
-    if os.path.exists(MODEL_PATH):
-        modelo["pipeline"] = joblib.load(MODEL_PATH)
-    # Historial de reseñas y reclamos por cliente a partir del dataset integrado
-    if os.path.exists(DATA_PATH):
-        modelo["historial"] = historial_clientes(pd.read_csv(DATA_PATH, sep=";"))
+    if os.getenv("MLFLOW_TRACKING_URI"):
+        # Modo nube: modelo e historial desde el registro de MLflow en DagsHub
+        nombre, alias = MODEL_URI.removeprefix("models:/").split("@")
+        version = mlflow.MlflowClient().get_model_version_by_alias(nombre, alias)
+        modelo["pipeline"] = mlflow.sklearn.load_model(MODEL_URI)
+        ruta_historial = mlflow.artifacts.download_artifacts(
+            run_id=version.run_id, artifact_path="historial/historial_clientes.csv"
+        )
+        modelo["historial"] = pd.read_csv(ruta_historial, index_col="id_cliente")
+        modelo["origen"] = "dagshub"
+        modelo["version"] = version.version
     else:
-        modelo["historial"] = pd.DataFrame(columns=["resenas_previas", "reclamos_previos"])
+        # Modo local: modelo y dataset integrado desde el disco
+        if os.path.exists(MODEL_PATH):
+            modelo["pipeline"] = joblib.load(MODEL_PATH)
+        if os.path.exists(DATA_PATH):
+            modelo["historial"] = historial_clientes(pd.read_csv(DATA_PATH, sep=";"))
+        else:
+            modelo["historial"] = pd.DataFrame(columns=["resenas_previas", "reclamos_previos"])
+        modelo["origen"] = "local"
+        modelo["version"] = None
     yield
     modelo.clear()
 
@@ -81,7 +99,8 @@ def read_root():
 def health_check():
     """ Endpoint para verificar el estado de la API """
     if "pipeline" in modelo:
-        return {"status": "ok", "message": "La API está funcionando correctamente."}
+        return {"status": "ok", "message": "La API está funcionando correctamente.",
+                "origen": modelo.get("origen"), "version_modelo": modelo.get("version")}
     else:
         raise HTTPException(status_code=503, detail="El modelo no está cargado. La API no está disponible.")
 

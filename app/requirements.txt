@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pandas
+scikit-learn==1.9.1
+mlflow
+skops
+python-dotenv
+streamlit
+requests

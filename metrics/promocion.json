@@ -1,0 +1,8 @@
+{
+  "nombre": "clasificador-sentimientos",
+  "version": 1,
+  "test_accuracy": 0.876102646351243,
+  "umbral_accuracy": 0.8,
+  "promovido": true,
+  "alias": "produccion"
+}

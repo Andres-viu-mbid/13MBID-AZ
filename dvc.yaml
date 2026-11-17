@@ -40,6 +40,7 @@ stages:
     cmd: .venv/bin/python src/train_model.py
     deps:
       - src/train_model.py
+      - src/data_prep.py
       - data/processed/datos_integrados.csv
     outs:
       - models/trained_model.pkl
@@ -48,6 +49,8 @@ stages:
       - docs/figures/roc_curve_test.png
     metrics:
       - metrics/train_metrics.json:
+          cache: false
+      - metrics/modelo_registrado.json:
           cache: false
   test_model:
     desc: Verifica el modelo entrenado (métricas, objetivo de negocio, línea base, fuga de datos y uso) y genera un reporte HTML.
@@ -60,3 +63,15 @@ stages:
       - data/processed/datos_integrados.csv
     outs:
       - docs/reporte_test_modelo.html
+
+  promote_model:
+    desc: Promueve la versión registrada en DagsHub al alias produccion si cumple el objetivo de negocio (accuracy >= 0.80).
+    cmd: .venv/bin/python src/promote_model.py
+    deps:
+      - src/promote_model.py
+      - metrics/train_metrics.json
+      - metrics/modelo_registrado.json
+      - docs/reporte_test_modelo.html
+    metrics:
+      - metrics/promocion.json:
+          cache: false

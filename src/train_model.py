@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+from data_prep import historial_clientes
 from dotenv import find_dotenv, load_dotenv
 from mlflow.models import infer_signature
 from sklearn.compose import ColumnTransformer
@@ -46,6 +47,9 @@ HIPERPARAMETROS_MODELO = {
     "max_iter": 2000,
     "random_state": SEED,
 }
+
+# Nombre del modelo en el Model Registry de MLflow (DagsHub)
+NOMBRE_MODELO_REGISTRADO = "clasificador-sentimientos"
 
 
 def _resolver(ruta, base):
@@ -126,6 +130,7 @@ def train_model(
     preprocessor_output_path: str = "models/preprocessor.pkl",
     metrics_output_path: str = "metrics/train_metrics.json",
     figures_output_path: str = "docs/figures",
+    registro_output_path: str = "metrics/modelo_registrado.json",
 ):
     """
     Entrena un modelo de clasificación utilizando los datos procesados y guarda el modelo, el preprocesador, las figuras y las métricas.
@@ -136,6 +141,7 @@ def train_model(
         preprocessor_output_path (str): Ruta donde se guardará el preprocesador.
         metrics_output_path (str): Ruta donde se guardarán las métricas de entrenamiento.
         figures_output_path (str): Ruta donde se guardarán las figuras generadas durante el entrenamiento.
+        registro_output_path (str): Ruta donde se guardarán los datos del modelo registrado.
 
     Returns:
         tuple: (pipeline, preprocesador, metrics) con el pipeline entrenado, el preprocesador ajustado y el diccionario de métricas.
@@ -154,6 +160,7 @@ def train_model(
     preprocessor_output_path = _resolver(preprocessor_output_path, REPO_ROOT)
     metrics_output_path = _resolver(metrics_output_path, REPO_ROOT)
     figures_output_path = _resolver(figures_output_path, REPO_ROOT)
+    registro_output_path = _resolver(registro_output_path, REPO_ROOT)
 
     # Carga de datos
     X_train, X_val, X_test, y_train, y_val, y_test, features_X, labels_y = load_data(
@@ -258,12 +265,25 @@ def train_model(
         mlflow.log_metrics(metrics)
         mlflow.log_artifact(str(cm_fig_path), artifact_path="figures")
         mlflow.log_artifact(str(roc_fig_path), artifact_path="figures")
-        mlflow.sklearn.log_model(
-            pipeline, name="model", signature=signature, input_example=X_train.head(3)
+        model_info = mlflow.sklearn.log_model(
+            pipeline,
+            name="model",
+            signature=signature,
+            input_example=X_train.head(3),
+            registered_model_name=NOMBRE_MODELO_REGISTRADO,
         )
+
+        # Historial de reseñas y reclamos por cliente, necesario para crear los atributos en predicción
+        historial = historial_clientes(pd.read_csv(data_path, sep=";"))
+        historial_path = Path(figures_output_path).parent / "historial_clientes.csv"
+        historial.to_csv(historial_path)
+        mlflow.log_artifact(str(historial_path), artifact_path="historial")
+        historial_path.unlink()
 
         run_id = mlflow.active_run().info.run_id
         print(f"Modelo registrado en MLFlow a raíz del run ID: {run_id}")
+        version_registrada = model_info.registered_model_version
+        print(f"Modelo registrado como '{NOMBRE_MODELO_REGISTRADO}' versión {version_registrada}")
 
     Path(model_output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(preprocessor_output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -276,6 +296,16 @@ def train_model(
     # Guardado de métricas en un archivo JSON
     with open(metrics_output_path, "w") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
+
+    # Datos del modelo registrado, usados por la etapa de promoción
+    Path(registro_output_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(registro_output_path, "w") as f:
+        json.dump(
+            {"nombre": NOMBRE_MODELO_REGISTRADO, "version": int(version_registrada), "run_id": run_id},
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
 
     return pipeline, pipeline.named_steps["prep"], metrics
 

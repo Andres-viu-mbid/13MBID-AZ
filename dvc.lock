@@ -109,10 +109,14 @@ stages:
       hash: md5
       md5: a1957310d01f860c672330645c56ba6a
       size: 5584759
+    - path: src/data_prep.py
+      hash: md5
+      md5: 6d9f0dda703f92f5b4cdd19b4a083f28
+      size: 12138
     - path: src/train_model.py
       hash: md5
-      md5: bbf0d5b0eb6ac0202fe58c419ec1429c
-      size: 10717
+      md5: 2d6cb61d05e6735c0aeb16ab1695a8b9
+      size: 12185
     outs:
     - path: docs/figures/confusion_matrix_test.png
       hash: md5
@@ -122,17 +126,21 @@ stages:
       hash: md5
       md5: 2ee1e568cda4e01e3833c624e04c617b
       size: 39276
+    - path: metrics/modelo_registrado.json
+      hash: md5
+      md5: 30bc942577e9cbf1b59b332714cabbac
+      size: 107
     - path: metrics/train_metrics.json
       hash: md5
       md5: da3369d742f46d1dd2770e7bb815630e
       size: 256
     - path: models/preprocessor.pkl
       hash: md5
-      md5: 7f8158deb70b24540dd7d19ce143cca2
+      md5: bc4325c66644723846a2247228dd4e5f
       size: 11490
     - path: models/trained_model.pkl
       hash: md5
-      md5: ebc5364e18bedd7162b83c8410f9e0ab
+      md5: 392ca0c40b17520dd9e98001bc1433e4
       size: 17201
   test_model:
     cmd: .venv/bin/python -m pytest --html=docs/reporte_test_modelo.html 
@@ -148,12 +156,12 @@ stages:
       size: 256
     - path: models/trained_model.pkl
       hash: md5
-      md5: ebc5364e18bedd7162b83c8410f9e0ab
+      md5: 392ca0c40b17520dd9e98001bc1433e4
       size: 17201
     - path: src/train_model.py
       hash: md5
-      md5: bbf0d5b0eb6ac0202fe58c419ec1429c
-      size: 10717
+      md5: 2d6cb61d05e6735c0aeb16ab1695a8b9
+      size: 12185
     - path: test/test_train.py
       hash: md5
       md5: 0b92e9ed43923347680aae3b818abcf7
@@ -161,5 +169,29 @@ stages:
     outs:
     - path: docs/reporte_test_modelo.html
       hash: md5
-      md5: cc8346b3ea697762163ea38fa35dc208
+      md5: 9486dd5d46006c2494517da0f1597113
       size: 35936
+  promote_model:
+    cmd: .venv/bin/python src/promote_model.py
+    deps:
+    - path: docs/reporte_test_modelo.html
+      hash: md5
+      md5: 9486dd5d46006c2494517da0f1597113
+      size: 35936
+    - path: metrics/modelo_registrado.json
+      hash: md5
+      md5: 30bc942577e9cbf1b59b332714cabbac
+      size: 107
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: da3369d742f46d1dd2770e7bb815630e
+      size: 256
+    - path: src/promote_model.py
+      hash: md5
+      md5: 92d818044e61db3d2992c0005e0197df
+      size: 2439
+    outs:
+    - path: metrics/promocion.json
+      hash: md5
+      md5: 3ec02c13590c3a9b8bb73d7729dda405
+      size: 169

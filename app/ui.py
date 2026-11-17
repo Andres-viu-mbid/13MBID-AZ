@@ -24,8 +24,9 @@ def obtener_opciones():
         dict: Diccionario con las opciones de categorías de productos y ciudades
     """
     try:
-        response = requests.get(f"{API_URL}/opciones", timeout=10)
-        response.raise_for_status()
+        with st.spinner("Conectando con la API (si estaba inactiva puede tardar hasta un minuto)..."):
+            response = requests.get(f"{API_URL}/opciones", timeout=60)
+            response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         st.error(f"Error al obtener las opciones desde la API: {e}")
@@ -86,7 +87,7 @@ if enviar:
     }
 
     try:
-        respuesta = requests.post(f"{API_URL}/predict", json=datos, timeout=30)
+        respuesta = requests.post(f"{API_URL}/predict", json=datos, timeout=60)
     except requests.exceptions.RequestException:
         st.error("Error al conectar con la API. Por favor, inténtelo de nuevo más tarde.")
         st.stop()
