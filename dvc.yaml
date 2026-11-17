@@ -49,3 +49,14 @@ stages:
     metrics:
       - metrics/train_metrics.json:
           cache: false
+  test_model:
+    desc: Verifica el modelo entrenado (métricas, objetivo de negocio, línea base, fuga de datos y uso) y genera un reporte HTML.
+    cmd: .venv/bin/python -m pytest --html=docs/reporte_test_modelo.html --self-contained-html test/test_train.py -v || true
+    deps:
+      - test/test_train.py
+      - src/train_model.py
+      - models/trained_model.pkl
+      - metrics/train_metrics.json
+      - data/processed/datos_integrados.csv
+    outs:
+      - docs/reporte_test_modelo.html
