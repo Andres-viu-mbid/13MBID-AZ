@@ -57,6 +57,71 @@ th, td {{ border: 1px solid #999; padding: 6px 8px; }}
     return ruta
 
 
+def historial_clientes(datos_integrados: pd.DataFrame) -> pd.DataFrame:
+    """ Resume el historial de reseñas y reclamos formales de cada cliente
+
+    Args:
+        datos_integrados (pd.DataFrame): Dataset integrado con las columnas id_cliente y reclamo_formal
+
+    Returns:
+        pd.DataFrame: Historial indexado por id_cliente con las columnas resenas_previas y reclamos_previos
+    """
+    return datos_integrados.groupby("id_cliente").agg(
+        resenas_previas=("reclamo_formal", "size"),
+        reclamos_previos=("reclamo_formal", lambda s: int((s == "Sí").sum())),
+    )
+
+
+def create_attributes(df: pd.DataFrame, historial: pd.DataFrame | None = None) -> pd.DataFrame:
+    """ Calcula atributos derivados de una reseña a partir del historial del cliente
+
+    Args:
+        df (pd.DataFrame): DataFrame con una o varias reseñas, con las columnas id_cliente,
+            id_resena, texto_resena, tiempo_respuesta_horas y reclamo_formal
+        historial (pd.DataFrame | None): Historial de clientes devuelto por historial_clientes.
+            Si es None (modo entrenamiento), los atributos de cliente se calculan agrupando
+            el propio df por id_cliente. Si se proporciona (modo predicción), se usa ese
+            historial y se le suma la reseña actual. Un cliente ausente del historial, o con
+            id_cliente nulo, se trata como cliente nuevo.
+
+    Returns:
+        pd.DataFrame: Copia de df con las 5 columnas derivadas: longitud_resena,
+            cantidad_palabras_resena, tiempo_respuesta_dias, cantidad_resenas_cliente y
+            proporcion_reclamos_cliente.
+    """
+    resultado = df.copy()
+
+    # Longitud en caracteres del texto de la reseña
+    resultado["longitud_resena"] = resultado["texto_resena"].str.len()
+    # Cantidad de palabras del texto de la reseña
+    resultado["cantidad_palabras_resena"] = resultado["texto_resena"].str.split().str.len()
+    # Tiempo de respuesta en días, redondeado a dos decimales
+    resultado["tiempo_respuesta_dias"] = (resultado["tiempo_respuesta_horas"] / 24).round(2)
+
+    if historial is None:
+        # Modo entrenamiento: historial calculado sobre el propio dataset
+        # Número de reseñas (compras) registradas por cada cliente
+        resultado["cantidad_resenas_cliente"] = resultado.groupby("id_cliente")["id_resena"].transform("size")
+        # Fracción de reseñas de cada cliente con reclamo formal igual a "Sí"
+        resultado["proporcion_reclamos_cliente"] = (
+            resultado.groupby("id_cliente")["reclamo_formal"]
+            .transform(lambda s: (s == "Sí").mean())
+            .round(4)
+        )
+    else:
+        # Modo predicción: historial del dataset integrado más la reseña actual
+        ids = resultado["id_cliente"] if "id_cliente" in resultado.columns else pd.Series(pd.NA, index=resultado.index)
+        previas = ids.map(historial["resenas_previas"]).fillna(0).astype(int)
+        reclamos = ids.map(historial["reclamos_previos"]).fillna(0).astype(int)
+        reclamo_actual = (resultado["reclamo_formal"] == "Sí").astype(int)
+        resultado["cantidad_resenas_cliente"] = previas + 1
+        resultado["proporcion_reclamos_cliente"] = (
+            (reclamos + reclamo_actual) / resultado["cantidad_resenas_cliente"]
+        ).round(4)
+
+    return resultado
+
+
 def process_data(
     datos_clientes: str = "data/raw/datos_clientes.csv",
     datos_resenas: str = "data/raw/datos_resenas.csv",
@@ -181,20 +246,7 @@ def process_data(
     ####################################################################
     # Construcción de atributos derivados
     ####################################################################
-    # Longitud en caracteres del texto de la reseña
-    datos_integrados["longitud_resena"] = datos_integrados["texto_resena"].str.len()
-    # Cantidad de palabras del texto de la reseña
-    datos_integrados["cantidad_palabras_resena"] = datos_integrados["texto_resena"].str.split().str.len()
-    # Tiempo de respuesta en días, redondeado a dos decimales
-    datos_integrados["tiempo_respuesta_dias"] = (datos_integrados["tiempo_respuesta_horas"] / 24).round(2)
-    # Número de reseñas (compras) registradas por cada cliente
-    datos_integrados["cantidad_resenas_cliente"] = datos_integrados.groupby("id_cliente")["id_resena"].transform("size")
-    # Fracción de reseñas de cada cliente con reclamo formal igual a "Sí"
-    datos_integrados["proporcion_reclamos_cliente"] = (
-        datos_integrados.groupby("id_cliente")["reclamo_formal"]
-        .transform(lambda s: (s == "Sí").mean())
-        .round(4)
-    )
+    datos_integrados = create_attributes(datos_integrados)
     pasos.append({
         "paso": 9,
         "descripcion": "Construcción de atributos derivados",

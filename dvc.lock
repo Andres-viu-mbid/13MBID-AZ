@@ -91,8 +91,8 @@ stages:
       size: 4465568
     - path: src/data_prep.py
       hash: md5
-      md5: d10cf865cb1adc1539ad5b2db72935b3
-      size: 9693
+      md5: 6d9f0dda703f92f5b4cdd19b4a083f28
+      size: 12138
     outs:
     - path: data/processed/datos_integrados.csv
       hash: md5
@@ -100,7 +100,7 @@ stages:
       size: 5584759
     - path: docs/reporte_transformaciones.html
       hash: md5
-      md5: 49976c1938b8ef1830bd7d283b01f2f7
+      md5: 9ff4b28245e53e4d6f9339db91df346c
       size: 3718
   train_model:
     cmd: .venv/bin/python src/train_model.py

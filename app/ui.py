@@ -13,8 +13,7 @@ COLORES = {"Positivo": "🟢", "Neutral": "🟡", "Negativo": "🔴"}
 
 st.set_page_config(page_title="Sentimientos en reseñas", layout="wide")
 st.title("Clasificación de Sentimientos en Reseñas de Productos")
-# TODO: completar nombres de los autores del trabajo
-st.caption("[autor/es] - Proyecto 13MBID - Ingrese los datos de la reseña y obtenga la predicción del sentimiento.")
+st.caption("Andrés Felipe Zapata Rozo - Proyecto 13MBID - Ingrese los datos de la reseña y obtenga la predicción del sentimiento.")
 
 
 @st.cache_data(ttl=300)
@@ -61,6 +60,7 @@ with st.form("formulario_reseña"):
     genero = col7.selectbox("Género del usuario", opciones["genero"])
     ciudad = col6.selectbox("Ciudad del usuario", opciones["ciudad"])
     antiguedad_cliente_meses = col7.number_input("Antigüedad del cliente (meses)", min_value=0, step=1, value=12)
+    id_cliente = col6.number_input("ID del cliente (opcional; 0 = cliente nuevo)", min_value=0, step=1, value=0)
 
     enviar = st.form_submit_button("Predecir sentimiento", type="primary")
 
@@ -81,7 +81,8 @@ if enviar:
         "edad": edad,
         "genero": genero,
         "ciudad": ciudad,
-        "antiguedad_cliente_meses": antiguedad_cliente_meses
+        "antiguedad_cliente_meses": antiguedad_cliente_meses,
+        "id_cliente": int(id_cliente) or None
     }
 
     try:
@@ -96,7 +97,7 @@ if enviar:
 
     resultado = respuesta.json()
     sentimiento = resultado.get("sentimiento")
-    st.metric("Sentimmiento estimado", f"{COLORES.get(sentimiento, '')} {sentimiento}")
+    st.metric("Sentimiento estimado", f"{COLORES.get(sentimiento, '')} {sentimiento}")
 
     if "probabilidad" in resultado:
         probabilidades = pd.Series(resultado["probabilidad"], name="Probabilidad")

@@ -6,10 +6,11 @@ from typing import Literal
 import joblib
 
 from contextlib import asynccontextmanager
-from src.data_prep import create_attributes
+from src.data_prep import create_attributes, historial_clientes
 
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/trained_model.pkl")
+DATA_PATH = os.getenv("DATA_PATH", "data/processed/datos_integrados.csv")
 
 # Definimos los dominios de los atributos de entrada
 CATEGORIAS = Literal["Alimentos", "Belleza", "Calzado", "Deportes",
@@ -40,7 +41,8 @@ class Resena(BaseModel):
     ciudad: CIUDADES = Field(examples=["Buenos Aires"], description="Ciudad del usuario")
     antiguedad_cliente_meses: int = Field(ge=0, examples=[12], description="Antigüedad del cliente en meses")
 
-    # TODO: incorporar los atributos adicionales que hayan sido definidos en el proceso de transformación
+    # identificación del cliente para recuperar su historial (los atributos derivados se calculan con create_attributes)
+    id_cliente: int | None = Field(default=None, ge=1, examples=[294], description="ID del cliente registrado; si se omite o no existe se considera un cliente nuevo")
 
 
 class PredictionResponse(BaseModel):
@@ -56,6 +58,11 @@ async def lifespan(app: FastAPI):
     # Cargar el modelo entrenado y el preprocesador al iniciar la aplicación
     if os.path.exists(MODEL_PATH):
         modelo["pipeline"] = joblib.load(MODEL_PATH)
+    # Historial de reseñas y reclamos por cliente a partir del dataset integrado
+    if os.path.exists(DATA_PATH):
+        modelo["historial"] = historial_clientes(pd.read_csv(DATA_PATH, sep=";"))
+    else:
+        modelo["historial"] = pd.DataFrame(columns=["resenas_previas", "reclamos_previos"])
     yield
     modelo.clear()
 
@@ -88,7 +95,9 @@ def predict_sentiment(resena: Resena):
     pipeline = modelo["pipeline"]
 
     # Crear los atributos adicionales
-    df = create_attributes(pd.DataFrame([resena.dict()]))
+    df = create_attributes(pd.DataFrame([resena.model_dump()]), historial=modelo.get("historial"))
+    # Se ordenan las columnas como en el entrenamiento y se descarta id_cliente
+    df = df[pipeline.feature_names_in_]
 
     sentimiento = pipeline.predict(df)[0]
     probabilidades = {}
